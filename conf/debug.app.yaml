@@ -14,5 +14,6 @@ etcd:
     - 127.0.0.1:2379
 
 grpc:
-  name: project/product
-  host: 127.0.0.1:5557
+  name: project/order
+  host:
+  port: 20000
