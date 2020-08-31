@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"goshop/service-order/pkg/utils"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/unknwon/com"
 )
 
 var (
@@ -19,7 +21,7 @@ func GetDbConnect() (*gorm.DB, error) {
 	db, err := gorm.Open("mysql", dbConStr)
 	Conn = db
 
-	if gin.Mode() == "dev" || gin.Mode() == "test" {
+	if gin.Mode() == "debug" || gin.Mode() == "test" {
 		db.LogMode(true)
 	}
 
@@ -31,4 +33,38 @@ func getConnectDbName() string {
 	flag.Parse()
 
 	return *dbName
+}
+
+func BatchInsert(db *gorm.DB, tableName string, fields []string, params [][]interface{}) error {
+	var (
+		buf bytes.Buffer
+	)
+
+	buf.WriteString("INSERT INTO ")
+	buf.WriteString(tableName)
+	buf.WriteString("(")
+	for i, field := range fields {
+		buf.WriteString(field)
+		if i != len(fields)-1 {
+			buf.WriteString(",")
+		}
+	}
+	buf.WriteString(") VALUES ")
+	for i, param := range params {
+		buf.WriteString("(")
+		for j, value := range param {
+			buf.WriteString("'")
+			buf.WriteString(com.ToStr(value))
+			buf.WriteString("'")
+			if j != len(param)-1 {
+				buf.WriteString(",")
+			}
+		}
+		buf.WriteString(")")
+		if i != len(params)-1 {
+			buf.WriteString(",")
+		}
+	}
+
+	return db.Exec(buf.String()).Error
 }
