@@ -34,7 +34,7 @@ func NewOperate(order *order.Order) *Operate {
 		status = &PendingShipment{order: order}
 	case orderpb.OrderStatus_PendingReceiving:
 		status = &PendingReceiving{order: order}
-	case orderpb.OrderStatus_PendingCompletion:
+	case orderpb.OrderStatus_Completed:
 		status = &Completed{order: order}
 	case orderpb.OrderStatus_PendingComment:
 		status = &PendingComment{order: order}
