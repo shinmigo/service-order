@@ -4,7 +4,7 @@ import (
 	"context"
 	"goshop/service-order/model/order"
 	"goshop/service-order/model/order_shipment"
-	order2 "goshop/service-order/service/order"
+	order2 "goshop/service-order/service/rpc/order"
 
 	"github.com/shinmigo/pb/basepb"
 	"github.com/shinmigo/pb/orderpb"
