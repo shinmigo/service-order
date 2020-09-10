@@ -122,6 +122,7 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 			OrderAddress:  orderAddress,
 			OrderPayment:  orderPayment,
 			OrderShipment: orderShipment,
+			CreatedAt:     order.CreatedAt.Format(utils.TIME_STD_FORMART),
 		})
 	}
 
