@@ -2,7 +2,9 @@ package rpc
 
 import (
 	"context"
+	"database/sql"
 	"goshop/service-order/model/order"
+	"goshop/service-order/pkg/db"
 	"goshop/service-order/pkg/utils"
 
 	"github.com/shinmigo/pb/orderpb"
@@ -129,5 +131,29 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 	return &orderpb.ListOrderRes{
 		Total:  total,
 		Orders: orderDetails,
+	}, nil
+}
+
+func (o *Order) GetOrderStatus(ctx context.Context, req *orderpb.GetOrderStatusReq) (*orderpb.ListOrderStatusRes, error) {
+	var (
+		rows   *sql.Rows
+		result = make([]*orderpb.ListOrderStatusRes_OrderStatistics, 0, 8)
+		err    error
+	)
+	if rows, err = db.Conn.Model(&order.Order{}).Where("store_id = ?", req.StoreId).
+		Select("order_status, count(*) as count").
+		Group("order_status").
+		Rows(); err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var row orderpb.ListOrderStatusRes_OrderStatistics
+		db.Conn.ScanRows(rows, &row)
+		result = append(result, &row)
+	}
+
+	return &orderpb.ListOrderStatusRes{
+		OrderStatistics: result,
 	}, nil
 }
