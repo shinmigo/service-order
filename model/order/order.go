@@ -30,7 +30,7 @@ type Order struct {
 	ShippingStatus  orderpb.OrderShippingStatus
 	ShippingTime    utils.JSONTime
 	Confirm         orderpb.OrderConfirm
-	ConfigTime      utils.JSONTime
+	ConfirmTime     utils.JSONTime
 	OrderStatus     orderpb.OrderStatus
 	OrderType       orderpb.OrderType
 	RefundStatus    orderpb.OrderRefundStatus

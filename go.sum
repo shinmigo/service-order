@@ -284,6 +284,8 @@ github.com/shinmigo/pb v0.0.0-20200722100848-43efafe8fa47 h1:HrRNK3fdWUJG/n1nAp/
 github.com/shinmigo/pb v0.0.0-20200722100848-43efafe8fa47/go.mod h1:UYGDfX6q55shSf95Mn1LE5C/rKde0su7DBf0W7QKeaY=
 github.com/shinmigo/pb v0.0.0-20200910062730-27491f03576d h1:Zlpcy8zSU5u8SXb9m8ORHfFB/52ruzJgTK6tdZ2JrGM=
 github.com/shinmigo/pb v0.0.0-20200910062730-27491f03576d/go.mod h1:sE6q+pYXPmwYntosms0U/zV12SDdDiOhJTFyJRl4bTE=
+github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
+github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=

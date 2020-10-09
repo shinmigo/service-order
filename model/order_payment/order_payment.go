@@ -13,3 +13,20 @@ type OrderPayment struct {
 	CreatedAt      utils.JSONTime
 	UpdatedAt      utils.JSONTime
 }
+
+const OrderPayment_Wechat = "微信"
+const OrderPayment_Alipay = "支付宝"
+
+//获取
+func GetPaymentName(paymentCode string) (paymentName string) {
+	switch paymentCode {
+	case "Wechat":
+		paymentName = OrderPayment_Wechat
+	case "Alipay":
+		paymentName = OrderPayment_Alipay
+	default:
+		paymentName = "未知"
+	}
+
+	return
+}

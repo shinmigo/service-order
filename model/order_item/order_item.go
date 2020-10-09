@@ -29,6 +29,16 @@ type OrderItem struct {
 	UpdatedAt           utils.JSONTime
 }
 
+type Spec struct {
+	Name        string `json:"name"`
+	SpecValueId uint64 `json:"spec_value_id"`
+	Value       string `json:"value"`
+}
+
+func GetTableName() string {
+	return "order_item"
+}
+
 func GetListByOrderId(orderId uint64) ([]*OrderItem, error) {
 	var (
 		orderItem []*OrderItem

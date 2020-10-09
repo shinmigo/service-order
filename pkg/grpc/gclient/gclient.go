@@ -19,6 +19,7 @@ var (
 	ProductParam          productpb.ParamServiceClient
 	ProductKind           productpb.KindServiceClient
 	Member                memberpb.MemberServiceClient
+	Address               memberpb.AddressServiceClient
 	ProductCategoryClient productpb.CategoryServiceClient
 	ProductSpecClient     productpb.SpecServiceClient
 	ProductClient         productpb.ProductServiceClient
@@ -54,6 +55,7 @@ func crm() {
 	}
 	fmt.Printf("连接成功：%s, host分别为: %s \n", utils.C.GrpcClient.Name["crm"], strings.Join(utils.C.Etcd.Host, ","))
 	Member = memberpb.NewMemberServiceClient(conn)
+	Address = memberpb.NewAddressServiceClient(conn)
 }
 
 func pms() {
