@@ -154,13 +154,15 @@ func (o *Order) GetOrderStatus(ctx context.Context, req *orderpb.GetOrderStatusR
 		result = make([]*orderpb.ListOrderStatusRes_OrderStatistics, 0, 8)
 		err    error
 	)
-	if rows, err = db.Conn.Model(&order.Order{}).Where("store_id = ?", req.StoreId).
-		Select("order_status, count(*) as count").
-		Group("order_status").
-		Rows(); err != nil {
+
+	queryHandler := db.Conn.Model(&order.Order{}).Where("store_id = ?", req.StoreId)
+	if req.MemberId > 0 {
+		queryHandler = queryHandler.Where("member_id = ?", req.MemberId)
+	}
+	rows, err = queryHandler.Select("order_status, count(*) as count").Group("order_status").Rows()
+	if err != nil {
 		return nil, err
 	}
-
 	for rows.Next() {
 		var row orderpb.ListOrderStatusRes_OrderStatistics
 		db.Conn.ScanRows(rows, &row)
