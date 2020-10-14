@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"goshop/service-order/model/order"
 	"goshop/service-order/model/order_address"
@@ -405,6 +406,88 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 
 	return &basepb.AnyRes{
 		Id:    orderId,
+		State: 1,
+	}, nil
+}
+
+/*
+ * 取消订单
+ */
+func (o *Order) CancelOrder(ctx context.Context, req *orderpb.CancelOrderReq) (res *basepb.AnyRes, err error) {
+	orderIdLen := len(req.OrderId)
+	recordId := make([]uint64, 0, 8)
+
+	query := db.Conn.Table(order.GetTableName()).Select("order_id")
+	if orderIdLen == 1 {
+		query = query.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
+	} else {
+		query = query.Where("order_id in (?) AND store_id = ? AND member_id =?", req.OrderId, req.StoreId, req.MemberId)
+	}
+	err = query.Pluck("order_id", &recordId).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(recordId) != orderIdLen {
+		return nil, errors.New("无此订单信息！")
+	}
+
+	updateQuery := db.Conn.Table(order.GetTableName())
+	if orderIdLen == 1 {
+		updateQuery = updateQuery.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
+	} else {
+		updateQuery = updateQuery.Where("order_id in (?) AND store_id = ? AND member_id =?", req.OrderId, req.StoreId, req.MemberId)
+	}
+	err = updateQuery.Update("order_status", orderpb.OrderStatus_Canceled).Error
+	if err != nil {
+		return nil, err
+	}
+	if utils.IsCancelled(ctx) {
+		return nil, fmt.Errorf("client cancelled ")
+	}
+
+	return &basepb.AnyRes{
+		Id:    1,
+		State: 1,
+	}, nil
+}
+
+/*
+ * 删除订单
+ */
+func (o *Order) DeleteOrder(ctx context.Context, req *orderpb.DeleteOrderReq) (res *basepb.AnyRes, err error) {
+	orderIdLen := len(req.OrderId)
+	recordId := make([]uint64, 0, 8)
+
+	query := db.Conn.Table(order.GetTableName()).Select("order_id")
+	if orderIdLen == 1 {
+		query = query.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
+	} else {
+		query = query.Where("order_id in (?) AND store_id = ? AND member_id =?", req.OrderId, req.StoreId, req.MemberId)
+	}
+	err = query.Pluck("order_id", &recordId).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(recordId) != orderIdLen {
+		return nil, errors.New("无此订单信息！")
+	}
+
+	updateQuery := db.Conn.Table(order.GetTableName())
+	if orderIdLen == 1 {
+		updateQuery = updateQuery.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
+	} else {
+		updateQuery = updateQuery.Where("order_id in (?) AND store_id = ? AND member_id =?", req.OrderId, req.StoreId, req.MemberId)
+	}
+	err = updateQuery.Delete(&order.Order{}).Error
+	if err != nil {
+		return nil, err
+	}
+	if utils.IsCancelled(ctx) {
+		return nil, fmt.Errorf("client cancelled ")
+	}
+
+	return &basepb.AnyRes{
+		Id:    1,
 		State: 1,
 	}, nil
 }

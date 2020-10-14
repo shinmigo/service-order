@@ -45,6 +45,10 @@ type Order struct {
 	OrderShipment   *order_shipment.OrderShipment `gorm:"foreignkey:OrderId"`
 }
 
+func GetTableName() string {
+	return "order"
+}
+
 func GetOneByOrderId(orderId uint64) (*Order, error) {
 	if orderId == 0 {
 		return nil, fmt.Errorf("order id is null")
