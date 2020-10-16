@@ -6,22 +6,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	
 	"goshop/service-order/model/order"
 	"goshop/service-order/model/order_address"
 	"goshop/service-order/model/order_item"
-	"goshop/service-order/model/order_payment"
 	"goshop/service-order/pkg/db"
 	"goshop/service-order/pkg/grpc/gclient"
 	"goshop/service-order/pkg/utils"
-
+	
 	"github.com/shopspring/decimal"
-
+	
 	"github.com/shinmigo/pb/memberpb"
-
+	
 	"github.com/shinmigo/pb/productpb"
-
+	
 	"github.com/shinmigo/pb/basepb"
-
+	
 	"github.com/shinmigo/pb/orderpb"
 )
 
@@ -37,19 +37,18 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 		orderDetails = make([]*orderpb.OrderDetail, 0, req.PageSize)
 	)
 	orders, total, err := order.GetOrders(req)
-
+	
 	if err != nil {
 		return nil, err
 	}
-
+	
 	for _, order := range orders {
 		var (
 			orderItems    = make([]*orderpb.OrderDetail_OrderItems, 0, 8)
 			orderAddress  *orderpb.OrderDetail_OrderAddress
-			orderPayment  *orderpb.OrderDetail_OrderPayment
 			orderShipment *orderpb.OrderDetail_OrderShipment
 		)
-
+		
 		for _, item := range order.OrderItem {
 			orderItems = append(orderItems, &orderpb.OrderDetail_OrderItems{
 				OrderItemId:         item.OrderItemId,
@@ -68,15 +67,7 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 				QtyShipped:          item.QtyShipped,
 			})
 		}
-
-		if order.OrderPayment != nil {
-			orderPayment = &orderpb.OrderDetail_OrderPayment{
-				OrderPaymentId: order.OrderPayment.OrderPaymentId,
-				PaymentCode:    order.OrderPayment.PaymentCode,
-				PaymentName:    order.OrderPayment.PaymentName,
-			}
-		}
-
+		
 		if order.OrderAddress != nil {
 			orderAddress = &orderpb.OrderDetail_OrderAddress{
 				OrderAddressId: order.OrderAddress.OrderAddressId,
@@ -88,14 +79,14 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 				Street:         order.OrderAddress.Street,
 			}
 		}
-
+		
 		if order.OrderShipment != nil {
 			orderShipment = &orderpb.OrderDetail_OrderShipment{
 				CarrierName:    order.OrderShipment.CarrierName,
 				TrackingNumber: order.OrderShipment.TrackingNumber,
 			}
 		}
-
+		
 		orderDetails = append(orderDetails, &orderpb.OrderDetail{
 			OrderId:        order.OrderId,
 			StoreId:        order.StoreId,
@@ -112,7 +103,7 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 				if order.PaymentTime.IsZero() {
 					return ""
 				}
-
+				
 				return order.PaymentTime.Format(utils.TIME_STD_FORMART)
 			}(),
 			ShippingStatus: order.ShippingStatus,
@@ -120,7 +111,7 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 				if order.ShippingTime.IsZero() {
 					return ""
 				}
-
+				
 				return order.ShippingTime.Format(utils.TIME_STD_FORMART)
 			}(),
 			Confirm: order.Confirm,
@@ -128,7 +119,7 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 				if order.ConfirmTime.IsZero() {
 					return ""
 				}
-
+				
 				return order.ConfirmTime.Format(utils.TIME_STD_FORMART)
 			}(),
 			OrderStatus:   order.OrderStatus,
@@ -137,12 +128,11 @@ func (o *Order) GetOrderList(ctx context.Context, req *orderpb.ListOrderReq) (*o
 			UserNote:      order.UserNote,
 			OrderItems:    orderItems,
 			OrderAddress:  orderAddress,
-			OrderPayment:  orderPayment,
 			OrderShipment: orderShipment,
 			CreatedAt:     order.CreatedAt.Format(utils.TIME_STD_FORMART),
 		})
 	}
-
+	
 	return &orderpb.ListOrderRes{
 		Total:  total,
 		Orders: orderDetails,
@@ -155,7 +145,7 @@ func (o *Order) GetOrderStatus(ctx context.Context, req *orderpb.GetOrderStatusR
 		result = make([]*orderpb.ListOrderStatusRes_OrderStatistics, 0, 8)
 		err    error
 	)
-
+	
 	queryHandler := db.Conn.Model(&order.Order{}).Where("store_id = ?", req.StoreId)
 	if req.MemberId > 0 {
 		queryHandler = queryHandler.Where("member_id = ?", req.MemberId)
@@ -169,7 +159,7 @@ func (o *Order) GetOrderStatus(ctx context.Context, req *orderpb.GetOrderStatusR
 		db.Conn.ScanRows(rows, &row)
 		result = append(result, &row)
 	}
-
+	
 	return &orderpb.ListOrderStatusRes{
 		OrderStatistics: result,
 	}, nil
@@ -181,37 +171,26 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 		productIds       []uint64
 		orderData        *order.Order
 		orderAddressData *order_address.OrderAddress
-		orderPaymentData *order_payment.OrderPayment
 		addressDetail    *memberpb.Address
-		paymentCode      string
-		ok               bool
 		listProductResp  *productpb.ListProductRes
 	)
 	productSpecs := make(map[uint64]map[uint64]*productpb.ProductSpec) //map[ProductId]map[ProductSpecId]Spec
 	productsDetail := make(map[uint64]*productpb.ProductDetail)        //map[ProductId]ProductDetail
 	specValues := make(map[uint64]map[uint64]map[string]string)        //map[ProductId]map[SpecValueId][string]string
 	orderId := utils.GetUniqueId()
-
+	
 	type specDescriptionChildren struct {
 		Content     string `json:"content"`
 		SpecId      uint64 `json:"spec_id"`
 		SpecValueId uint64 `json:"spec_value_id"`
 	}
-
+	
 	type specDescription struct {
 		Name     string                             `json:"name"`
 		SpecId   uint64                             `json:"spec_id"`
 		Children map[string]specDescriptionChildren `json:"children"`
 	}
-
-	if req.PaymentCode == 0 {
-		return nil, fmt.Errorf("未选择支付类型")
-	}
-
-	if paymentCode, ok = orderpb.PaymentCode_name[int32(req.PaymentCode)]; !ok {
-		return nil, fmt.Errorf("支付类型不存在")
-	}
-
+	
 	tx := db.Conn.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -222,7 +201,7 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 			tx.Rollback()
 		}
 	}()
-
+	
 	for _, product := range req.Products {
 		productIds = append(productIds, product.ProductId)
 	}
@@ -234,11 +213,11 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 	}); err != nil {
 		return nil, err
 	}
-
+	
 	if listProductResp.Total == 0 {
 		return nil, fmt.Errorf("商品不存在")
 	}
-
+	
 	for _, product := range listProductResp.Products {
 		var specDescriptions []*specDescription
 		for _, productSpec := range product.Spec {
@@ -267,7 +246,7 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 			}
 		}
 	}
-
+	
 	var (
 		subtotalDecimal       decimal.Decimal
 		grandTotalDecimal     decimal.Decimal
@@ -317,17 +296,17 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 					specs = append(specs, spec)
 				}
 				specJson, _ := json.Marshal(&specs)
-
+				
 				return string(specJson)
 			}(),
 		}
-
+		
 		if err = tx.Create(orderItem).Error; err != nil {
 			return nil, err
 		}
 	}
 	grandTotalDecimal = subtotalDecimal.Add(shippingAmountDecimal).Sub(discountAmountDecimal)
-
+	
 	grandTotal, _ := grandTotalDecimal.Float64()
 	subtotal, _ := subtotalDecimal.Float64()
 	shippingAmount, _ := shippingAmountDecimal.Float64()
@@ -360,7 +339,7 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 	if err = tx.Create(orderData).Error; err != nil {
 		return nil, err
 	}
-
+	
 	if addressDetail, err = gclient.Address.GetAddressDetail(ctx, &basepb.GetOneReq{
 		Id: req.AddressId,
 	}); err != nil {
@@ -369,7 +348,7 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 	if addressDetail.MemberId != req.MemberId {
 		return nil, fmt.Errorf("选择的地址有误")
 	}
-
+	
 	orderAddressData = &order_address.OrderAddress{
 		OrderAddressId: utils.GetUniqueId(),
 		OrderId:        orderId,
@@ -385,25 +364,11 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 	if err = tx.Create(orderAddressData).Error; err != nil {
 		return nil, err
 	}
-
-	orderPaymentData = &order_payment.OrderPayment{
-		OrderPaymentId: utils.GetUniqueId(),
-		OrderId:        orderId,
-		ShippingAmount: shippingAmount,
-		AmountPaid:     0,
-		AmountOrdered:  grandTotal,
-		PaymentName:    order_payment.GetPaymentName(paymentCode),
-		PaymentCode:    paymentCode,
-	}
-
-	if err = tx.Create(orderPaymentData).Error; err != nil {
-		return nil, err
-	}
-
+	
 	if err = tx.Commit().Error; err != nil {
 		return nil, err
 	}
-
+	
 	return &basepb.AnyRes{
 		Id:    orderId,
 		State: 1,
@@ -416,7 +381,7 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 func (o *Order) CancelOrder(ctx context.Context, req *orderpb.CancelOrderReq) (res *basepb.AnyRes, err error) {
 	orderIdLen := len(req.OrderId)
 	recordId := make([]uint64, 0, 8)
-
+	
 	query := db.Conn.Table(order.GetTableName()).Select("order_id")
 	if orderIdLen == 1 {
 		query = query.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
@@ -430,7 +395,7 @@ func (o *Order) CancelOrder(ctx context.Context, req *orderpb.CancelOrderReq) (r
 	if len(recordId) != orderIdLen {
 		return nil, errors.New("无此订单信息！")
 	}
-
+	
 	updateQuery := db.Conn.Table(order.GetTableName())
 	if orderIdLen == 1 {
 		updateQuery = updateQuery.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
@@ -444,7 +409,7 @@ func (o *Order) CancelOrder(ctx context.Context, req *orderpb.CancelOrderReq) (r
 	if utils.IsCancelled(ctx) {
 		return nil, fmt.Errorf("client cancelled ")
 	}
-
+	
 	return &basepb.AnyRes{
 		Id:    1,
 		State: 1,
@@ -457,7 +422,7 @@ func (o *Order) CancelOrder(ctx context.Context, req *orderpb.CancelOrderReq) (r
 func (o *Order) DeleteOrder(ctx context.Context, req *orderpb.DeleteOrderReq) (res *basepb.AnyRes, err error) {
 	orderIdLen := len(req.OrderId)
 	recordId := make([]uint64, 0, 8)
-
+	
 	query := db.Conn.Table(order.GetTableName()).Select("order_id")
 	if orderIdLen == 1 {
 		query = query.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
@@ -471,7 +436,7 @@ func (o *Order) DeleteOrder(ctx context.Context, req *orderpb.DeleteOrderReq) (r
 	if len(recordId) != orderIdLen {
 		return nil, errors.New("无此订单信息！")
 	}
-
+	
 	updateQuery := db.Conn.Table(order.GetTableName())
 	if orderIdLen == 1 {
 		updateQuery = updateQuery.Where("order_id = ? AND store_id = ? AND member_id =?", req.OrderId[0], req.StoreId, req.MemberId)
@@ -485,7 +450,7 @@ func (o *Order) DeleteOrder(ctx context.Context, req *orderpb.DeleteOrderReq) (r
 	if utils.IsCancelled(ctx) {
 		return nil, fmt.Errorf("client cancelled ")
 	}
-
+	
 	return &basepb.AnyRes{
 		Id:    1,
 		State: 1,
