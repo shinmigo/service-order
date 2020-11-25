@@ -375,6 +375,49 @@ func (o *Order) AddOrder(ctx context.Context, req *orderpb.Order) (*basepb.AnyRe
 	}, nil
 }
 
+// 支付订单
+func (o *Order) PayOrder(ctx context.Context, req *orderpb.PayOrderReq) (res *basepb.AnyRes, err error) {
+	orderIdLen := len(req.OrderId)
+	recordId := make([]uint64, 0, 8)
+	
+	query := db.Conn.Table(order.GetTableName()).Select("order_id")
+	if orderIdLen == 1 {
+		query = query.Where("order_id = ? and payment_status = ? and order_status = ?", req.OrderId[0], orderpb.OrderPaymentStatus_Unpaid, orderpb.OrderStatus_PendingPayment)
+	} else {
+		query = query.Where("order_id in (?) and payment_status = ? and order_status = ?", req.OrderId, orderpb.OrderPaymentStatus_Unpaid, orderpb.OrderStatus_PendingPayment)
+	}
+	err = query.Pluck("order_id", &recordId).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(recordId) != orderIdLen {
+		return nil, errors.New("无此订单信息！")
+	}
+	
+	updateQuery := db.Conn.Table(order.GetTableName())
+	if orderIdLen == 1 {
+		updateQuery = updateQuery.Where("order_id = ? and payment_status = ? and order_status = ?", req.OrderId[0], orderpb.OrderPaymentStatus_Unpaid, orderpb.OrderStatus_PendingPayment)
+	} else {
+		updateQuery = updateQuery.Where("order_id in (?) and payment_status = ? and order_status = ?", req.OrderId, orderpb.OrderPaymentStatus_Unpaid, orderpb.OrderStatus_PendingPayment)
+	}
+	editMap := map[string]interface{}{
+		"payment_status": orderpb.OrderPaymentStatus_PartPaid,
+		"order_status":   orderpb.OrderStatus_PendingReview,
+	}
+	err = updateQuery.Updates(editMap).Error
+	if err != nil {
+		return nil, err
+	}
+	if utils.IsCancelled(ctx) {
+		return nil, fmt.Errorf("client cancelled ")
+	}
+	
+	return &basepb.AnyRes{
+		Id:    1,
+		State: 1,
+	}, nil
+}
+
 /*
  * 取消订单
  */
