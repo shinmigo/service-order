@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 	
 	"goshop/service-order/model/order"
 	"goshop/service-order/model/order_address"
@@ -402,6 +404,7 @@ func (o *Order) PayOrder(ctx context.Context, req *orderpb.PayOrderReq) (res *ba
 	}
 	editMap := map[string]interface{}{
 		"payment_status": orderpb.OrderPaymentStatus_PartPaid,
+		"payment_time":   strconv.FormatInt(time.Now().Unix(), 10),
 		"order_status":   orderpb.OrderStatus_PendingReview,
 	}
 	err = updateQuery.Updates(editMap).Error
