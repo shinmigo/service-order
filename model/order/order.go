@@ -90,9 +90,9 @@ func GetOrders(req *orderpb.ListOrderReq) ([]*Order, uint64, error) {
 		})
 	}
 
-	if req.OrderStatus > 0 {
+	if len(req.OrderStatus) > 0 {
 		conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
-			return db.Where("order_status = ?", req.OrderStatus)
+			return db.Where("order_status in (?)", req.OrderStatus)
 		})
 	}
 
